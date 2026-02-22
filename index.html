@@ -4,8 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>প্রবাসী সেবা রহিম</title>
+    
+    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    
+    <!-- ZEGOCLOUD Video Call SDK -->
+    <script src="https://unpkg.com/@zegocloud/zego-uikit-prebuilt/zego-uikit-prebuilt.js"></script>
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
     <style>
@@ -33,10 +39,18 @@
         
         /* গ্রিড কন্টেইনার */
         .grid-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
-        .service-card { background: white; border-radius: 16px; padding: 15px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-decoration: none; color: #333; transition: transform 0.2s; display: flex; flex-direction: column; align-items: center; height: 140px; justify-content: center; cursor: pointer; }
+        
+        /* সার্ভিস কার্ড এবং স্পিকার বাটন */
+        .service-card { position: relative; background: white; border-radius: 16px; padding: 15px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-decoration: none; color: #333; transition: transform 0.2s; display: flex; flex-direction: column; align-items: center; height: 160px; justify-content: center; cursor: pointer; }
         .service-card:active { transform: scale(0.95); background: #f0fdf4; }
         .service-icon { width: 60px; height: 60px; object-fit: contain; margin-bottom: 10px; }
-        .service-title { font-size: 14px; font-weight: 700; line-height: 1.3; }
+        .service-title { font-size: 14px; font-weight: 700; line-height: 1.3; margin-bottom: 25px; }
+        
+        /* স্পিকার বাটন */
+        .card-speak-btn {
+            position: absolute; bottom: 10px; right: 10px; background: #e8f5e9; color: #006a4e; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); z-index: 5; transition: all 0.2s;
+        }
+        .card-speak-btn:active { transform: scale(0.8); background: #006a4e; color: white; }
         
         .inline-ad-slot { grid-column: span 2; background: white; border-radius: 16px; padding: 5px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; min-height: 80px; max-height: 150px; display: flex; justify-content: center; align-items: center; margin-top: 5px; }
 
@@ -46,95 +60,29 @@
         .nav-item i { font-size: 20px; display: block; margin-bottom: 5px; }
         .nav-item.active { color: #006a4e; font-weight: bold; }
 
-        /* ইউটিউব ভিডিও ডিজাইন - আপডেট করা হয়েছে */
+        /* ইউটিউব ভিডিও */
         .yt-folder { background: white; border-radius: 12px; margin-bottom: 15px; padding: 15px; display: flex; align-items: center; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .yt-folder i { font-size: 24px; color: #ffad1f; margin-right: 15px; }
         .yt-info h4 { margin: 0; font-size: 16px; color: #333; }
         .yt-info p { margin: 3px 0 0; font-size: 12px; color: #777; }
         
-        .video-item { 
-            background: white; 
-            border-radius: 12px; 
-            margin-bottom: 25px; 
-            overflow: hidden; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.08); 
-            display: block;
-            width: 100%;
-            position: relative;
-        }
-
+        .video-item { background: white; border-radius: 12px; margin-bottom: 25px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.08); display: block; width: 100%; position: relative; }
         .video-thumbnail-container { position: relative; width: 100%; height: 200px; background: #000; cursor: pointer; }
         .video-thumb-img { width: 100%; height: 100%; object-fit: cover; opacity: 0.9; }
         .play-icon-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 50px; background: rgba(204, 0, 0, 0.85); width: 70px; height: 70px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 15px rgba(0,0,0,0.4); }
-        
-        .video-title-text { 
-            padding: 15px; 
-            font-size: 16px; 
-            color: #222; 
-            font-weight: 600; 
-            text-align: left; 
-            line-height: 1.5; 
-            background: #fff;
-            border-top: 1px solid #eee;
-            display: block;
-        }
+        .video-title-text { padding: 15px; font-size: 16px; color: #222; font-weight: 600; text-align: left; line-height: 1.5; background: #fff; border-top: 1px solid #eee; display: block; }
+        .video-frame { width: 100%; height: 100%; border: none; background: black; }
 
-        .video-frame { 
-            width: 100%; 
-            height: 100%; /* Height fixed to fill container */
-            border: none; 
-            background: black;
-        }
-
-        /* --- ফুলস্ক্রিন মোড ফিক্স (আপডেট করা) --- */
-        
-        body.fullscreen-active .header,
-        body.fullscreen-active .bottom-nav,
-        body.fullscreen-active .highlight-box,
-        body.fullscreen-active .video-title-text,
-        body.fullscreen-active h3,
-        body.fullscreen-active .yt-folder {
-            display: none !important;
-        }
-
-        body.fullscreen-active {
-            background-color: black !important;
-            overflow: hidden !important;
-        }
-
-        body.fullscreen-active .page-section {
-            padding: 0 !important;
-            margin: 0 !important;
-        }
-
-        /* শুধু যেই ভিডিওটি প্লে হচ্ছে সেটি ফুলস্ক্রিন হবে */
-        body.fullscreen-active .video-item.active-playing-video {
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100vw !important;
-            height: 100vh !important;
-            z-index: 99999 !important;
-            background: black;
-            margin: 0 !important;
-            border-radius: 0 !important;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
-
-        body.fullscreen-active .video-item.active-playing-video .video-thumbnail-container {
-            height: 100% !important;
-            width: 100% !important;
-        }
-        
-        /* অন্য সব ভিডিও লুকিয়ে রাখা হবে */
-        body.fullscreen-active .video-item:not(.active-playing-video) {
-            display: none !important;
-        }
-        
+        /* ফুলস্ক্রিন ফিক্স */
+        body.fullscreen-active .header, body.fullscreen-active .bottom-nav, body.fullscreen-active .highlight-box, body.fullscreen-active .video-title-text, body.fullscreen-active h3, body.fullscreen-active .yt-folder { display: none !important; }
+        body.fullscreen-active { background-color: black !important; overflow: hidden !important; }
+        body.fullscreen-active .page-section { padding: 0 !important; margin: 0 !important; }
+        body.fullscreen-active .video-item.active-playing-video { position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 99999 !important; background: black; margin: 0 !important; border-radius: 0 !important; display: flex; flex-direction: column; justify-content: center; }
+        body.fullscreen-active .video-item.active-playing-video .video-thumbnail-container { height: 100% !important; width: 100% !important; }
+        body.fullscreen-active .video-item:not(.active-playing-video) { display: none !important; }
         :fullscreen { z-index: 999999; }
         
+        /* অন্যান্য কম্পোনেন্ট */
         .notice-icon-card { display: flex; align-items: center; background: white; padding: 12px; border-radius: 12px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); cursor: pointer; }
         .notice-icon-img { width: 40px; height: 40px; border-radius: 8px; margin-right: 15px; object-fit: cover; }
         .notice-icon-title { font-weight: 600; font-size: 15px; color: #333; }
@@ -150,11 +98,28 @@
         .btn-skip { background: #00b140; color: white; border: none; padding: 10px 25px; border-radius: 25px; cursor: pointer; font-size: 16px; font-weight: bold; }
         .timer-text { color: white; margin-bottom: 10px; font-weight: bold; font-size: 14px; }
         
-        /* ডিটেইল পেজ ডিজাইন */
         #textureDetailContent { padding-bottom: 50px; }
         .detail-img { width: 100%; border-radius: 10px; margin-bottom: 15px; }
         .detail-title { font-size: 20px; font-weight: bold; margin-bottom: 10px; color: #006a4e; }
         .detail-content { font-size: 15px; line-height: 1.6; color: #444; }
+
+        .btn-speak { background: linear-gradient(135deg, #006a4e, #00b140); color: white; border: none; padding: 12px 25px; border-radius: 30px; font-size: 16px; cursor: pointer; margin-top: 20px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); font-weight: bold; transition: all 0.2s; }
+        .btn-speak.playing { background: linear-gradient(135deg, #d32f2f, #f44336); }
+        .btn-speak:active { transform: scale(0.98); }
+
+        /* --- ইন-অ্যাপ ব্রাউজার (ডেস্কটপ মোড) --- */
+        #web-view-container { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 10000; flex-direction: column; }
+        .web-view-header { background: #006a4e; color: white; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; height: 50px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .close-web-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 5px 15px; border-radius: 20px; cursor: pointer; font-size: 14px; }
+        .browser-wrapper { flex: 1; position: relative; overflow: hidden; background: #f1f1f1; width: 100%; }
+        #app-browser-frame { position: absolute; top: 0; left: 0; border: none; width: 1280px; height: 100%; transform-origin: 0 0; background: white; }
+        .browser-error-msg { position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); text-align:center; display:none; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 80%; }
+        .force-open-btn { background: #006a4e; color: white; border: none; padding: 10px 20px; border-radius: 20px; margin-top: 15px; font-size: 14px; cursor: pointer; }
+
+        /* --- ভিডিও কল পেজ স্টাইল --- */
+        #call-container { width: 100%; height: 100vh; position: fixed; top: 0; left: 0; z-index: 20000; background: #fff; display: none; }
+        .call-input-group { margin-bottom: 15px; text-align: left; }
+        .call-input-label { font-size: 14px; font-weight: bold; color: #444; display: block; margin-bottom: 5px; }
     </style>
 </head>
 <body>
@@ -170,6 +135,7 @@
         </div>
     </div>
 
+    <!-- হোম পেজ -->
     <div id="home-page" class="page-section active">
         <div class="highlight-box">
             <div class="rate-label">আজকের টাকার রেট (BD)</div>
@@ -180,20 +146,68 @@
         <div class="grid-container" id="featuredServices"></div>
     </div>
 
+    <!-- সেবা পেজ -->
     <div id="services-page" class="page-section">
         <h3 style="margin-bottom:15px; color:#444; text-align:center;">সকল প্রবাসী সেবা</h3>
         <div class="grid-container" id="allServices"></div>
     </div>
 
+    <!-- নোটিশ পেজ -->
     <div id="texture-page" class="page-section">
         <h3 style="margin-bottom:15px; color:#444; text-align:center;">নোটিশ ও তথ্যাবলী</h3>
         <div id="textureList"><center>লোডিং...</center></div>
+    </div>
+    
+    <!-- ভিডিও কল পেজ (নতুন) -->
+    <div id="call-page" class="page-section">
+        <div class="highlight-box">
+            <h3 style="color: #006a4e; margin-bottom: 5px;">📞 ভিডিও কল</h3>
+            <p style="font-size: 12px; color: #666; margin-bottom: 20px;">বন্ধুর সাথে কথা বলতে একই "রুম আইডি" ব্যবহার করুন।</p>
+            
+            <div class="call-input-group">
+                <label class="call-input-label">আপনার নাম:</label>
+                <input type="text" id="userNameInput" class="calc-input" placeholder="নাম লিখুন (যেমন: রহিম)...">
+            </div>
+
+            <div class="call-input-group">
+                <label class="call-input-label">রুম আইডি (গোপন নম্বর):</label>
+                <input type="number" id="roomIDInput" class="calc-input" placeholder="যেকোনো সংখ্যা (যেমন: 1234)...">
+            </div>
+            
+            <button onclick="startZegoCall()" class="btn-speak" style="margin-top: 15px; background: linear-gradient(135deg, #0052cc, #007bff);">
+                <i class="fas fa-video"></i> ভিডিও কল শুরু করুন
+            </button>
+        </div>
+        <div style="text-align: center; color: #888; font-size: 12px; margin-top: 20px;">
+            <i class="fas fa-shield-alt"></i> ZEGOCLOUD দ্বারা সুরক্ষিত
+        </div>
     </div>
 
     <div id="texture-detail-view" style="display:none; padding: 20px; background: white; min-height: 100vh;">
         <div id="textureDetailContent"></div>
     </div>
 
+    <!-- ইন-অ্যাপ ব্রাউজার কন্টেইনার (ডেস্কটপ মোড) -->
+    <div id="web-view-container">
+        <div class="web-view-header">
+            <span style="font-weight:bold; font-size:16px;">ব্রাউজার (ডেস্কটপ মোড)</span>
+            <button class="close-web-btn" onclick="closeInAppBrowser()">বন্ধ করুন ✕</button>
+        </div>
+        <div class="browser-wrapper" id="browserWrapper">
+            <iframe id="app-browser-frame" src="" onerror="handleIframeError()"></iframe>
+            <!-- এরর মেসেজ যদি সাইট লোড না হয় -->
+            <div id="browserErrorMsg" class="browser-error-msg">
+                <i class="fas fa-exclamation-triangle" style="font-size:40px; color:#f44336; margin-bottom:10px;"></i>
+                <p>এই সাইটটি ডেস্কটপ মোডে ওপেন করা যাচ্ছে না।</p>
+                <button id="forceOpenBtn" class="force-open-btn">সরাসরি অ্যাপে খুলুন</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ZEGOCLOUD কল কন্টেইনার -->
+    <div id="zego-call-container" style="width: 100vw; height: 100vh; position: fixed; top: 0; left: 0; z-index: 99999; background: white; display: none;"></div>
+
+    <!-- ভিডিও পেজ -->
     <div id="youtube-page" class="page-section">
         <div id="yt-folder-list-view">
             <h3 style="margin-bottom:15px; color:#cc0000; text-align:center;">ভিডিও ক্যাটাগরি</h3>
@@ -205,6 +219,7 @@
         </div>
     </div>
 
+    <!-- ক্যালকুলেটর -->
     <div id="calculator-page" class="page-section">
         <div class="highlight-box" style="margin-top:0;">
             <h3>🧮 কারেন্সি কনভার্টার</h3>
@@ -220,6 +235,7 @@
     <div class="bottom-nav">
         <div class="nav-item active" onclick="switchTab('home-page', this)"><i class="fas fa-home"></i> হোম</div>
         <div class="nav-item" onclick="switchTab('services-page', this)"><i class="fas fa-th-large"></i> সেবা</div>
+        <div class="nav-item" onclick="switchTab('call-page', this)"><i class="fas fa-video"></i> কল</div>
         <div class="nav-item" onclick="switchTab('texture-page', this)"><i class="fas fa-file-alt"></i> নোটিশ</div>
         <div class="nav-item" onclick="switchTab('youtube-page', this)"><i class="fab fa-youtube" style="color:#cc0000;"></i> ভিডিও</div>
         <div class="nav-item" onclick="switchTab('calculator-page', this)"><i class="fas fa-calculator"></i> রেট</div>
@@ -259,7 +275,136 @@
         let preparedAd = null;
         let activeBannerCode = "";
 
-        // ফুলস্ক্রিন ডিটেকশন লজিক
+        // --- ZEGOCLOUD Video Call ---
+        const APP_ID = 1816814891;
+        const SERVER_SECRET = "38f24f1252e1b3ff409310520be1f78c";
+
+        function startZegoCall() {
+            const userName = document.getElementById('userNameInput').value.trim();
+            const roomID = document.getElementById('roomIDInput').value.trim();
+
+            if (!userName) { alert("দয়া করে আপনার নাম লিখুন!"); return; }
+            if (!roomID) { alert("দয়া করে একটি রুম আইডি দিন!"); return; }
+
+            const callContainer = document.getElementById('zego-call-container');
+            callContainer.style.display = 'block';
+
+            const userID = Math.floor(Math.random() * 10000) + "";
+            const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(APP_ID, SERVER_SECRET, roomID, userID, userName);
+            const zp = ZegoUIKitPrebuilt.create(kitToken);
+            
+            zp.joinRoom({
+                container: callContainer,
+                sharedLinks: [{ name: 'কল লিংক', url: window.location.href + '?roomID=' + roomID }],
+                scenario: { mode: ZegoUIKitPrebuilt.VideoConference },
+                showPreJoinView: false,
+                onLeaveRoom: () => {
+                    callContainer.style.display = 'none';
+                    window.location.reload();
+                }
+            });
+        }
+
+        // --- অডিও সিস্টেম (TTS) ---
+        let currentAudioPlayer = null;
+        let audioChunks = [];
+        let currentChunkIndex = 0;
+        let isSpeaking = false;
+
+        function toggleSpeech(text, btnId) {
+            const btn = btnId ? document.getElementById(btnId) : null;
+            if (isSpeaking) { stopAudio(); return; }
+            if (!text || text.trim() === "") return;
+
+            isSpeaking = true;
+            if(btn) {
+                btn.classList.add('playing');
+                const icon = btn.querySelector('i');
+                if(icon) icon.className = "fas fa-stop";
+                const span = btn.querySelector('span');
+                if(span) span.innerText = "থামান";
+            }
+            processAndPlay(text, btn);
+        }
+
+        function stopAudio(btn) {
+            if (currentAudioPlayer) { currentAudioPlayer.pause(); currentAudioPlayer = null; }
+            audioChunks = []; currentChunkIndex = 0; isSpeaking = false;
+
+            document.querySelectorAll('.playing').forEach(b => {
+                b.classList.remove('playing');
+                const icon = b.querySelector('i');
+                if(icon) icon.className = "fas fa-volume-up"; 
+                const span = b.querySelector('span');
+                if(span) span.innerText = "পড়ে শোনাও";
+            });
+        }
+
+        function processAndPlay(text, btn) {
+            const cleanText = text.replace(/<[^>]*>?/gm, '');
+            audioChunks = splitTextIntoChunks(cleanText, 120);
+            currentChunkIndex = 0;
+            playNextChunk(btn);
+        }
+
+        function splitTextIntoChunks(text, limit) {
+            const regex = new RegExp(`.{1,${limit}}(\\s|$)`, 'g');
+            return text.match(regex) || [text];
+        }
+
+        function playNextChunk(btn) {
+            if (!isSpeaking) return;
+            if (currentChunkIndex >= audioChunks.length) { stopAudio(btn); return; }
+
+            const chunk = audioChunks[currentChunkIndex].trim();
+            if (chunk.length === 0) { currentChunkIndex++; playNextChunk(btn); return; }
+
+            const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(chunk)}&tl=bn&client=tw-ob`;
+            currentAudioPlayer = new Audio(url);
+            
+            currentAudioPlayer.onended = function() { currentChunkIndex++; playNextChunk(btn); };
+            currentAudioPlayer.onerror = function() { currentChunkIndex++; playNextChunk(btn); };
+            currentAudioPlayer.play().catch(e => { console.log("Audio play error:", e); stopAudio(btn); });
+        }
+
+        // --- ইন-অ্যাপ ব্রাউজার (ডেস্কটপ মোড লজিক) ---
+        function openInAppBrowser(url) {
+            const container = document.getElementById('web-view-container');
+            const iframe = document.getElementById('app-browser-frame');
+            const errorMsg = document.getElementById('browserErrorMsg');
+            
+            errorMsg.style.display = 'none'; 
+            
+            const screenWidth = window.innerWidth;
+            const desktopWidth = 1280; 
+            const scale = screenWidth / desktopWidth;
+
+            iframe.style.transform = `scale(${scale})`;
+            iframe.style.width = `${desktopWidth}px`;
+            iframe.style.height = `${(100 / scale)}%`; 
+            
+            iframe.src = url;
+            container.style.display = 'flex';
+            window.history.pushState({page: 'browser'}, '', '');
+            
+            document.getElementById('forceOpenBtn').onclick = function() {
+                // এখানে ফিক্স করা হয়েছে: forceOpenBtn ক্লিক করলে সেই লিংকটি অ্যাপের ভিতরেই ওপেন হবে
+                window.location.href = url; 
+            };
+        }
+
+        function closeInAppBrowser() {
+            const container = document.getElementById('web-view-container');
+            const iframe = document.getElementById('app-browser-frame');
+            container.style.display = 'none';
+            iframe.src = ""; 
+        }
+        
+        function handleIframeError() {
+            document.getElementById('browserErrorMsg').style.display = 'block';
+        }
+
+        // ফুলস্ক্রিন ডিটেকশন
         document.addEventListener("fullscreenchange", onFullScreenChange, false);
         document.addEventListener("webkitfullscreenchange", onFullScreenChange, false);
         document.addEventListener("mozfullscreenchange", onFullScreenChange, false);
@@ -271,7 +416,6 @@
                 document.body.classList.add("fullscreen-active");
             } else {
                 document.body.classList.remove("fullscreen-active");
-                // ফুলস্ক্রিন থেকে বের হলে ক্লাস রিমুভ করা
                 const activeItem = document.querySelector('.video-item.active-playing-video');
                 if(activeItem) activeItem.classList.remove('active-playing-video');
             }
@@ -356,7 +500,15 @@
 
             snapshot.forEach((child) => {
                 const item = child.val();
-                const cardHtml = `<div class="service-card" onclick="handleServiceClick('${item.link}')"><img src="${item.icon}" class="service-icon" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2921/2921226.png'"><div class="service-title">${item.title}</div></div>`;
+                const cardHtml = `
+                    <div class="service-card" onclick="handleServiceClick('${item.link}')">
+                        <div class="card-speak-btn" onclick="event.stopPropagation(); toggleSpeech('${item.title}')">
+                            <i class="fas fa-volume-up"></i>
+                        </div>
+                        <img src="${item.icon}" class="service-icon" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2921/2921226.png'">
+                        <div class="service-title">${item.title}</div>
+                    </div>`;
+                    
                 allGrid.innerHTML += cardHtml;
                 if(count < 8) {
                     homeGrid.innerHTML += cardHtml;
@@ -383,13 +535,26 @@
 
         function openTextureDetail(key) {
             const item = textureData[key];
-            document.getElementById('textureDetailContent').innerHTML = `${item.image?`<img src="${item.image}" class="detail-img">`:''}<div class="detail-title">${item.title}</div><div class="detail-content">${item.content}</div>`;
+            const cleanContent = item.content.replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, ' ');
+
+            document.getElementById('textureDetailContent').innerHTML = `
+                ${item.image ? `<img src="${item.image}" class="detail-img">` : ''}
+                <div class="detail-title">${item.title}</div>
+                <div class="detail-content">${item.content}</div>
+                
+                <button id="speakBtn" onclick="toggleSpeech('${cleanContent}', 'speakBtn')" class="btn-speak">
+                    <i class="fas fa-volume-up"></i> <span>পড়ে শোনাও</span>
+                </button>
+            `;
             document.getElementById('texture-detail-view').style.display = 'block';
             window.scrollTo(0,0);
             window.history.pushState({page: 'detail'}, '', '');
         }
 
-        function closeTextureDetail() { document.getElementById('texture-detail-view').style.display = 'none'; }
+        function closeTextureDetail() { 
+            stopAudio(); 
+            document.getElementById('texture-detail-view').style.display = 'none'; 
+        }
 
         let youtubeData = {};
         db.ref('youtube_files').on('value', (snapshot) => {
@@ -417,7 +582,6 @@
             videoDiv.innerHTML = "";
 
             if(folder.videos) {
-                // vidKey ব্যবহার করা হয়েছে ইউনিক ID এর জন্য যাতে সঠিক ভিডিও ওপেন হয়
                 Object.keys(folder.videos).forEach(vidKey => {
                     const vid = folder.videos[vidKey];
                     const videoId = getYoutubeId(vid.link);
@@ -436,29 +600,26 @@
         }
 
         function playVideo(uniqueKey, videoId) {
-            // ইউনিক KEY ব্যবহার করে নির্দিষ্ট ভিডিও কন্টেইনার খুঁজে বের করা
             const itemContainer = document.getElementById(`vid-cont-${uniqueKey}`);
             if(!itemContainer) return;
-            
             const container = itemContainer.querySelector('.video-thumbnail-container');
-
-            // এই ভিডিও আইটেমে একটিভ ক্লাস যোগ করা এবং অন্যদের থেকে আলাদা করা
             itemContainer.classList.add("active-playing-video");
             document.body.classList.add("fullscreen-active");
-            
             const videoUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&playsinline=1&enablejsapi=1&origin=https://www.youtube.com`;
-
-            container.innerHTML = `
-                <iframe class="video-frame" 
-                src="${videoUrl}" 
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" 
-                allowfullscreen="true">
-                </iframe>`;
+            container.innerHTML = `<iframe class="video-frame" src="${videoUrl}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" allowfullscreen="true"></iframe>`;
         }
 
+        // --- মেইন লিংক হ্যান্ডলার (১০০% অ্যাপের ভিতরে, ডেস্কটপ মোডে) ---
         function handleServiceClick(targetUrl) {
             currentTargetUrl = targetUrl;
-            if (!availableAds || availableAds.length === 0) { window.location.href = targetUrl; return; }
+            
+            // ১. যদি অ্যাড না থাকে, সরাসরি ডেস্কটপ মোডে ওপেন করুন
+            if (!availableAds || availableAds.length === 0) { 
+                openInAppBrowser(targetUrl); 
+                return; 
+            }
+            
+            // ২. অ্যাড থাকলে অ্যাড দেখান
             const currentAd = preparedAd || availableAds[Math.floor(Math.random() * availableAds.length)];
             const modal = document.getElementById('adModal');
             const videoPlayer = document.getElementById('adPlayer');
@@ -487,13 +648,15 @@
             }
         }
 
+        // ৩. অ্যাড শেষ হলে ডেস্কটপ মোডে ওপেন হবে
         function finishAd() {
             document.getElementById('adModal').style.display = 'none';
             document.getElementById('adPlayer').pause();
             document.getElementById('adIframe').src = "about:blank";
             if(adTimerInterval) clearInterval(adTimerInterval);
             prepareRandomAd();
-            if (currentTargetUrl) window.location.href = currentTargetUrl;
+            
+            openInAppBrowser(currentTargetUrl);
         }
 
         function calculate() {
@@ -504,20 +667,18 @@
         }
 
         function switchTab(tabId, navElement) {
+            stopAudio();
             document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
             document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
             navElement.classList.add('active');
             
-            // ভিডিও ট্যাব ছাড়া অন্য ট্যাবে গেলে রিসেট করা
             if(tabId !== 'youtube-page') { 
                 document.getElementById('yt-video-list-view').style.display = 'none'; 
                 document.getElementById('yt-folder-list-view').style.display = 'block'; 
-                // ফুলস্ক্রিন ক্লাস রিমুভ করা যদি থাকে
                 document.body.classList.remove("fullscreen-active");
                 const activeItem = document.querySelector('.video-item.active-playing-video');
                 if(activeItem) activeItem.classList.remove('active-playing-video');
-                // পুরানো iframe মুছে ফেলা (রিলোড সমস্যা এড়াতে)
                 document.querySelectorAll('.video-frame').forEach(frame => {
                     frame.parentNode.innerHTML = `<img src="https://img.youtube.com/vi/${frame.src.split('/embed/')[1].split('?')[0]}/hqdefault.jpg" class="video-thumb-img"><div class="play-icon-overlay"><i class="fas fa-play"></i></div>`;
                 });
@@ -530,15 +691,22 @@
         }
 
         window.onpopstate = () => {
-            if(document.getElementById('adModal').style.display === 'flex') finishAd();
+            stopAudio(); 
+
+            if(document.getElementById('zego-call-container').style.display === 'block') {
+                document.getElementById('zego-call-container').style.display = 'none';
+                window.location.reload(); 
+            }
+            else if(document.getElementById('web-view-container').style.display === 'flex') {
+                closeInAppBrowser();
+            }
+            else if(document.getElementById('adModal').style.display === 'flex') finishAd();
             else if(document.getElementById('texture-detail-view').style.display === 'block') closeTextureDetail();
             else if(document.body.classList.contains("fullscreen-active")) {
-                // ভিডিও ফুলস্ক্রিন মোড থেকে বের হওয়া
                 document.body.classList.remove("fullscreen-active");
                 const activeItem = document.querySelector('.video-item.active-playing-video');
                 if(activeItem) {
                     activeItem.classList.remove('active-playing-video');
-                    // ভিডিও থামিয়ে থাম্বনেইলে ফেরত যাওয়া
                     const frame = activeItem.querySelector('iframe');
                     if(frame) {
                          const vidId = frame.src.split('/embed/')[1].split('?')[0];
