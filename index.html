@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>প্রবাসী সেবা রহিম</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; background-color: #f4f7f6; padding-bottom: 80px; -webkit-tap-highlight-color: transparent; }
+        
+        /* হেডার এবং সার্চ বার */
+        .header { background: linear-gradient(135deg, #006a4e, #00b140); color: white; padding: 15px 20px 25px 20px; border-bottom-left-radius: 25px; border-bottom-right-radius: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 100; transition: transform 0.3s ease; }
+        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .app-name { font-size: 22px; font-weight: bold; }
+        .date-display { font-size: 12px; opacity: 0.9; }
+        
+        .search-container { position: relative; width: 100%; margin: 0 auto; }
+        .search-input { width: 100%; padding: 12px 15px; padding-left: 45px; border: none; border-radius: 30px; font-size: 15px; outline: none; background: rgba(255, 255, 255, 0.95); color: #333; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #006a4e; font-size: 16px; }
+
+        /* পেজ সেকশন */
+        .page-section { display: none; padding: 15px; animation: fadeIn 0.3s; }
+        .page-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* হাইলাইট বক্স */
+        .highlight-box { background: white; border-radius: 15px; padding: 20px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-top: -10px; margin-bottom: 20px; position: relative; z-index: 10; }
+        .live-rate { font-size: 28px; font-weight: bold; color: #006a4e; }
+        
+        /* গ্রিড কন্টেইনার */
+        .grid-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+        .service-card { background: white; border-radius: 16px; padding: 15px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-decoration: none; color: #333; transition: transform 0.2s; display: flex; flex-direction: column; align-items: center; height: 140px; justify-content: center; cursor: pointer; }
+        .service-card:active { transform: scale(0.95); background: #f0fdf4; }
+        .service-icon { width: 60px; height: 60px; object-fit: contain; margin-bottom: 10px; }
+        .service-title { font-size: 14px; font-weight: 700; line-height: 1.3; }
+        
+        .inline-ad-slot { grid-column: span 2; background: white; border-radius: 16px; padding: 5px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; min-height: 80px; max-height: 150px; display: flex; justify-content: center; align-items: center; margin-top: 5px; }
+
+        /* বটম নেভিগেশন */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; justify-content: space-around; padding: 12px 0; box-shadow: 0 -4px 20px rgba(0,0,0,0.08); z-index: 1000; border-top-left-radius: 20px; border-top-right-radius: 20px; transition: transform 0.3s ease; }
+        .nav-item { text-align: center; color: #aaa; text-decoration: none; font-size: 11px; flex: 1; cursor: pointer; transition: color 0.3s; -webkit-tap-highlight-color: transparent; }
+        .nav-item i { font-size: 20px; display: block; margin-bottom: 5px; }
+        .nav-item.active { color: #006a4e; font-weight: bold; }
+
+        /* ইউটিউব ভিডিও ডিজাইন - আপডেট করা হয়েছে */
+        .yt-folder { background: white; border-radius: 12px; margin-bottom: 15px; padding: 15px; display: flex; align-items: center; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .yt-folder i { font-size: 24px; color: #ffad1f; margin-right: 15px; }
+        .yt-info h4 { margin: 0; font-size: 16px; color: #333; }
+        .yt-info p { margin: 3px 0 0; font-size: 12px; color: #777; }
+        
+        .video-item { 
+            background: white; 
+            border-radius: 12px; 
+            margin-bottom: 25px; 
+            overflow: hidden; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08); 
+            display: block;
+            width: 100%;
+            position: relative;
+        }
+
+        .video-thumbnail-container { position: relative; width: 100%; height: 200px; background: #000; cursor: pointer; }
+        .video-thumb-img { width: 100%; height: 100%; object-fit: cover; opacity: 0.9; }
+        .play-icon-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 50px; background: rgba(204, 0, 0, 0.85); width: 70px; height: 70px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 15px rgba(0,0,0,0.4); }
+        
+        .video-title-text { 
+            padding: 15px; 
+            font-size: 16px; 
+            color: #222; 
+            font-weight: 600; 
+            text-align: left; 
+            line-height: 1.5; 
+            background: #fff;
+            border-top: 1px solid #eee;
+            display: block;
+        }
+
+        .video-frame { 
+            width: 100%; 
+            height: 100%; /* Height fixed to fill container */
+            border: none; 
+            background: black;
+        }
+
+        /* --- ফুলস্ক্রিন মোড ফিক্স (আপডেট করা) --- */
+        
+        body.fullscreen-active .header,
+        body.fullscreen-active .bottom-nav,
+        body.fullscreen-active .highlight-box,
+        body.fullscreen-active .video-title-text,
+        body.fullscreen-active h3,
+        body.fullscreen-active .yt-folder {
+            display: none !important;
+        }
+
+        body.fullscreen-active {
+            background-color: black !important;
+            overflow: hidden !important;
+        }
+
+        body.fullscreen-active .page-section {
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+
+        /* শুধু যেই ভিডিওটি প্লে হচ্ছে সেটি ফুলস্ক্রিন হবে */
+        body.fullscreen-active .video-item.active-playing-video {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 99999 !important;
+            background: black;
+            margin: 0 !important;
+            border-radius: 0 !important;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        body.fullscreen-active .video-item.active-playing-video .video-thumbnail-container {
+            height: 100% !important;
+            width: 100% !important;
+        }
+        
+        /* অন্য সব ভিডিও লুকিয়ে রাখা হবে */
+        body.fullscreen-active .video-item:not(.active-playing-video) {
+            display: none !important;
+        }
+        
+        :fullscreen { z-index: 999999; }
+        
+        .notice-icon-card { display: flex; align-items: center; background: white; padding: 12px; border-radius: 12px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); cursor: pointer; }
+        .notice-icon-img { width: 40px; height: 40px; border-radius: 8px; margin-right: 15px; object-fit: cover; }
+        .notice-icon-title { font-weight: 600; font-size: 15px; color: #333; }
+        
+        .calc-input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 10px; font-size: 16px; outline: none; }
+        .calc-result { background: #e8f5e9; color: #006a4e; padding: 15px; border-radius: 10px; font-weight: bold; font-size: 20px; margin-top: 10px; }
+
+        .ad-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; z-index: 9999; flex-direction: column; align-items: center; justify-content: center; }
+        .ad-video-player { width: 100%; max-height: 80vh; background: black; }
+        .ad-iframe { width: 100%; height: 85vh; border: none; background: white; }
+        .ad-loader { border: 5px solid #f3f3f3; border-top: 5px solid #00b140; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; display: none; margin-bottom: 20px; }
+        .ad-controls { position: absolute; bottom: 0; width: 100%; background: rgba(0,0,0,0.8); padding: 15px 0; text-align: center; }
+        .btn-skip { background: #00b140; color: white; border: none; padding: 10px 25px; border-radius: 25px; cursor: pointer; font-size: 16px; font-weight: bold; }
+        .timer-text { color: white; margin-bottom: 10px; font-weight: bold; font-size: 14px; }
+        
+        /* ডিটেইল পেজ ডিজাইন */
+        #textureDetailContent { padding-bottom: 50px; }
+        .detail-img { width: 100%; border-radius: 10px; margin-bottom: 15px; }
+        .detail-title { font-size: 20px; font-weight: bold; margin-bottom: 10px; color: #006a4e; }
+        .detail-content { font-size: 15px; line-height: 1.6; color: #444; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="header-top">
+            <div class="app-name">প্রবাসী সেবা রহিম</div>
+            <div class="date-display" id="currentDate">...</div>
+        </div>
+        <div class="search-container">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" id="searchInput" class="search-input" placeholder="সেবা খুঁজুন (যেমন: পাসপোর্ট)..." onkeyup="searchServices()">
+        </div>
+    </div>
+
+    <div id="home-page" class="page-section active">
+        <div class="highlight-box">
+            <div class="rate-label">আজকের টাকার রেট (BD)</div>
+            <div class="live-rate" id="displayRateBD">...</div>
+            <small style="color:#888;">১ সৌদি রিয়াল = <span id="smallRate">...</span> টাকা</small>
+        </div>
+        <h3 style="margin-bottom:10px; color:#444; padding-left: 5px;">জনপ্রিয় সেবা</h3>
+        <div class="grid-container" id="featuredServices"></div>
+    </div>
+
+    <div id="services-page" class="page-section">
+        <h3 style="margin-bottom:15px; color:#444; text-align:center;">সকল প্রবাসী সেবা</h3>
+        <div class="grid-container" id="allServices"></div>
+    </div>
+
+    <div id="texture-page" class="page-section">
+        <h3 style="margin-bottom:15px; color:#444; text-align:center;">নোটিশ ও তথ্যাবলী</h3>
+        <div id="textureList"><center>লোডিং...</center></div>
+    </div>
+
+    <div id="texture-detail-view" style="display:none; padding: 20px; background: white; min-height: 100vh;">
+        <div id="textureDetailContent"></div>
+    </div>
+
+    <div id="youtube-page" class="page-section">
+        <div id="yt-folder-list-view">
+            <h3 style="margin-bottom:15px; color:#cc0000; text-align:center;">ভিডিও ক্যাটাগরি</h3>
+            <div id="ytFolderContainer"><center>লোডিং...</center></div>
+        </div>
+        <div id="yt-video-list-view" style="display:none;">
+            <h3 id="folderTitleDisplay" style="margin-top:0; margin-bottom:15px; color:#cc0000; text-align:center;">ভিডিওসমূহ</h3>
+            <div id="ytVideoContainer"></div>
+        </div>
+    </div>
+
+    <div id="calculator-page" class="page-section">
+        <div class="highlight-box" style="margin-top:0;">
+            <h3>🧮 কারেন্সি কনভার্টার</h3>
+            <input type="number" id="calcInput" class="calc-input" placeholder="রিয়াল লিখুন..." oninput="calculate()">
+            <select id="countrySelect" class="calc-input" onchange="calculate()">
+                <option value="BD">🇧🇩 বাংলাদেশ</option>
+                <option value="IN">🇮🇳 ইন্ডিয়া</option>
+            </select>
+            <div class="calc-result" id="calcResult">0.00 টাকা</div>
+        </div>
+    </div>
+
+    <div class="bottom-nav">
+        <div class="nav-item active" onclick="switchTab('home-page', this)"><i class="fas fa-home"></i> হোম</div>
+        <div class="nav-item" onclick="switchTab('services-page', this)"><i class="fas fa-th-large"></i> সেবা</div>
+        <div class="nav-item" onclick="switchTab('texture-page', this)"><i class="fas fa-file-alt"></i> নোটিশ</div>
+        <div class="nav-item" onclick="switchTab('youtube-page', this)"><i class="fab fa-youtube" style="color:#cc0000;"></i> ভিডিও</div>
+        <div class="nav-item" onclick="switchTab('calculator-page', this)"><i class="fas fa-calculator"></i> রেট</div>
+    </div>
+
+    <div id="adModal" class="ad-modal">
+        <div id="adLoader" class="ad-loader"></div>
+        <video id="adPlayer" class="ad-video-player" playsinline controls muted preload="auto" style="display:none;"></video>
+        <iframe id="adIframe" class="ad-iframe" style="display:none;"></iframe>
+        <div class="ad-controls">
+            <div id="adTimer" class="timer-text">অপেক্ষা করুন...</div>
+            <button id="skipBtn" class="btn-skip" style="display:none;" onclick="finishAd()">সার্ভিসে যান &gt;</button>
+        </div>
+    </div>
+
+    <script>
+        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('currentDate').innerText = new Date().toLocaleDateString('bn-BD', dateOptions);
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDJyPU2unY1ritu_GKKIbyWUdMGLn0E208",
+            authDomain: "md-abdur-90128.firebaseapp.com",
+            databaseURL: "https://md-abdur-90128-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "md-abdur-90128",
+            storageBucket: "md-abdur-90128.firebasestorage.app",
+            messagingSenderId: "569558327881",
+            appId: "1:569558327881:web:f1d7d75a680f032bad5598"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let currentRates = { BD: 0, IN: 0 };
+        let availableAds = []; 
+        let currentTargetUrl = "";
+        let textureData = {}; 
+        let adTimerInterval = null;
+        let preparedAd = null;
+        let activeBannerCode = "";
+
+        // ফুলস্ক্রিন ডিটেকশন লজিক
+        document.addEventListener("fullscreenchange", onFullScreenChange, false);
+        document.addEventListener("webkitfullscreenchange", onFullScreenChange, false);
+        document.addEventListener("mozfullscreenchange", onFullScreenChange, false);
+        document.addEventListener("msfullscreenchange", onFullScreenChange, false);
+
+        function onFullScreenChange() {
+            var fullscreenElement = document.fullscreenElement || document.mozFullScreenElement || document.webkitFullscreenElement;
+            if (fullscreenElement) {
+                document.body.classList.add("fullscreen-active");
+            } else {
+                document.body.classList.remove("fullscreen-active");
+                // ফুলস্ক্রিন থেকে বের হলে ক্লাস রিমুভ করা
+                const activeItem = document.querySelector('.video-item.active-playing-video');
+                if(activeItem) activeItem.classList.remove('active-playing-video');
+            }
+        }
+
+        function searchServices() {
+            let input = document.getElementById('searchInput').value.toLowerCase();
+            let activePage = document.querySelector('.page-section.active').id;
+            if(activePage !== 'home-page' && activePage !== 'services-page') {
+                switchTab('services-page', document.querySelectorAll('.nav-item')[1]);
+            }
+            let cards = document.querySelectorAll('.service-card');
+            cards.forEach(card => {
+                let title = card.querySelector('.service-title').innerText.toLowerCase();
+                card.style.display = title.includes(input) ? "flex" : "none";
+            });
+        }
+
+        function prepareRandomAd() {
+            if (!availableAds || availableAds.length === 0) return;
+            preparedAd = availableAds[Math.floor(Math.random() * availableAds.length)];
+            if (preparedAd.video && preparedAd.video.endsWith('.mp4')) {
+                const videoPlayer = document.getElementById('adPlayer');
+                videoPlayer.src = preparedAd.video;
+                videoPlayer.load();
+            }
+        }
+
+        db.ref('video_ads').on('value', (snapshot) => {
+            availableAds = [];
+            if(snapshot.exists()) {
+                snapshot.forEach(child => { availableAds.push(child.val()); });
+                prepareRandomAd();
+            }
+        });
+
+        let bannerRefreshInterval;
+        db.ref('banner_settings').on('value', (snapshot) => {
+            const settings = snapshot.val();
+            if (settings && settings.active) {
+                activeBannerCode = settings.code;
+                if(bannerRefreshInterval) clearInterval(bannerRefreshInterval);
+                const triggerRefresh = () => { loadInlineAd(); };
+                triggerRefresh();
+                bannerRefreshInterval = setInterval(triggerRefresh, (settings.interval || 60) * 1000);
+            } else {
+                activeBannerCode = "";
+                const slot = document.getElementById('inlineAdSlot');
+                if(slot) slot.style.display = 'none';
+            }
+        });
+
+        function loadInlineAd() {
+            const content = document.getElementById('inlineBannerContent');
+            if (content && activeBannerCode) {
+                const slot = document.getElementById('inlineAdSlot');
+                if(slot) slot.style.display = 'flex';
+                content.innerHTML = "";
+                const range = document.createRange();
+                const fragment = range.createContextualFragment(activeBannerCode);
+                content.appendChild(fragment);
+            }
+        }
+
+        db.ref('rates').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if(data) {
+                currentRates.BD = parseFloat(data.BD);
+                currentRates.IN = parseFloat(data.IN);
+                document.getElementById('displayRateBD').innerText = "৳ " + currentRates.BD;
+                document.getElementById('smallRate').innerText = currentRates.BD;
+                calculate();
+            }
+        });
+
+        db.ref('services').on('value', (snapshot) => {
+            const homeGrid = document.getElementById('featuredServices');
+            const allGrid = document.getElementById('allServices');
+            homeGrid.innerHTML = ""; allGrid.innerHTML = "";
+            let count = 0;
+            if(!snapshot.exists()) return;
+
+            snapshot.forEach((child) => {
+                const item = child.val();
+                const cardHtml = `<div class="service-card" onclick="handleServiceClick('${item.link}')"><img src="${item.icon}" class="service-icon" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2921/2921226.png'"><div class="service-title">${item.title}</div></div>`;
+                allGrid.innerHTML += cardHtml;
+                if(count < 8) {
+                    homeGrid.innerHTML += cardHtml;
+                    if(count === 5) {
+                        homeGrid.innerHTML += `<div class="inline-ad-slot" id="inlineAdSlot" style="display:none;"><div id="inlineBannerContent" style="width:100%;"></div></div>`;
+                        setTimeout(loadInlineAd, 500); 
+                    }
+                }
+                count++;
+            });
+        });
+
+        db.ref('textures').on('value', (snapshot) => {
+            const listDiv = document.getElementById('textureList');
+            listDiv.innerHTML = ""; textureData = {};
+            if(!snapshot.exists()) return;
+            snapshot.forEach(child => {
+                const item = child.val();
+                item.key = child.key;
+                textureData[item.key] = item;
+                listDiv.innerHTML += `<div class="notice-icon-card" onclick="openTextureDetail('${item.key}')"><img src="${item.image}" class="notice-icon-img" style="display:${item.image?'block':'none'}"><div class="notice-icon-title">${item.title}</div></div>`;
+            });
+        });
+
+        function openTextureDetail(key) {
+            const item = textureData[key];
+            document.getElementById('textureDetailContent').innerHTML = `${item.image?`<img src="${item.image}" class="detail-img">`:''}<div class="detail-title">${item.title}</div><div class="detail-content">${item.content}</div>`;
+            document.getElementById('texture-detail-view').style.display = 'block';
+            window.scrollTo(0,0);
+            window.history.pushState({page: 'detail'}, '', '');
+        }
+
+        function closeTextureDetail() { document.getElementById('texture-detail-view').style.display = 'none'; }
+
+        let youtubeData = {};
+        db.ref('youtube_files').on('value', (snapshot) => {
+            const folderDiv = document.getElementById('ytFolderContainer');
+            folderDiv.innerHTML = ""; youtubeData = {};
+            if(!snapshot.exists()) return;
+            snapshot.forEach(child => {
+                const key = child.key; const item = child.val(); youtubeData[key] = item;
+                folderDiv.innerHTML += `<div class="yt-folder" onclick="openYoutubeFolder('${key}')"><i class="fas fa-folder"></i><div class="yt-info"><h4>${item.fileName}</h4><p>${item.videos?Object.keys(item.videos).length:0} টি ভিডিও</p></div></div>`;
+            });
+        });
+
+        function getYoutubeId(url) {
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            const match = url.match(regExp);
+            return (match && match[2].length === 11) ? match[2] : null;
+        }
+
+        function openYoutubeFolder(key) {
+            const folder = youtubeData[key];
+            document.getElementById('yt-folder-list-view').style.display = 'none';
+            document.getElementById('yt-video-list-view').style.display = 'block';
+            document.getElementById('folderTitleDisplay').innerText = folder.fileName;
+            const videoDiv = document.getElementById('ytVideoContainer');
+            videoDiv.innerHTML = "";
+
+            if(folder.videos) {
+                // vidKey ব্যবহার করা হয়েছে ইউনিক ID এর জন্য যাতে সঠিক ভিডিও ওপেন হয়
+                Object.keys(folder.videos).forEach(vidKey => {
+                    const vid = folder.videos[vidKey];
+                    const videoId = getYoutubeId(vid.link);
+                    if(videoId) {
+                        videoDiv.innerHTML += `
+                            <div class="video-item" id="vid-cont-${vidKey}">
+                                <div class="video-thumbnail-container" onclick="playVideo('${vidKey}', '${videoId}')">
+                                    <img src="https://img.youtube.com/vi/${videoId}/hqdefault.jpg" class="video-thumb-img">
+                                    <div class="play-icon-overlay"><i class="fas fa-play"></i></div>
+                                </div>
+                                <div class="video-title-text">${vid.title || 'ভিডিও দেখুন'}</div>
+                            </div>`;
+                    }
+                });
+            }
+        }
+
+        function playVideo(uniqueKey, videoId) {
+            // ইউনিক KEY ব্যবহার করে নির্দিষ্ট ভিডিও কন্টেইনার খুঁজে বের করা
+            const itemContainer = document.getElementById(`vid-cont-${uniqueKey}`);
+            if(!itemContainer) return;
+            
+            const container = itemContainer.querySelector('.video-thumbnail-container');
+
+            // এই ভিডিও আইটেমে একটিভ ক্লাস যোগ করা এবং অন্যদের থেকে আলাদা করা
+            itemContainer.classList.add("active-playing-video");
+            document.body.classList.add("fullscreen-active");
+            
+            const videoUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&playsinline=1&enablejsapi=1&origin=https://www.youtube.com`;
+
+            container.innerHTML = `
+                <iframe class="video-frame" 
+                src="${videoUrl}" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" 
+                allowfullscreen="true">
+                </iframe>`;
+        }
+
+        function handleServiceClick(targetUrl) {
+            currentTargetUrl = targetUrl;
+            if (!availableAds || availableAds.length === 0) { window.location.href = targetUrl; return; }
+            const currentAd = preparedAd || availableAds[Math.floor(Math.random() * availableAds.length)];
+            const modal = document.getElementById('adModal');
+            const videoPlayer = document.getElementById('adPlayer');
+            const iframePlayer = document.getElementById('adIframe');
+            const timerTxt = document.getElementById('adTimer');
+            const skipBtn = document.getElementById('skipBtn');
+            const loader = document.getElementById('adLoader');
+
+            modal.style.display = 'flex'; skipBtn.style.display = 'none'; timerTxt.innerText = "লোডিং..."; loader.style.display = 'block';
+            let timeLeft = parseInt(currentAd.duration) || 5;
+
+            const startTimer = () => {
+                loader.style.display = 'none';
+                adTimerInterval = setInterval(() => {
+                    timeLeft--;
+                    timerTxt.innerText = (timeLeft > 0) ? `অপেক্ষা করুন: ${timeLeft} সেকেন্ড` : "";
+                    if(timeLeft <= 0) { clearInterval(adTimerInterval); skipBtn.style.display = 'inline-block'; }
+                }, 1000);
+            };
+
+            if (currentAd.video && currentAd.video.endsWith('.mp4')) {
+                iframePlayer.style.display = 'none'; videoPlayer.src = currentAd.video; videoPlayer.style.display = 'block';
+                videoPlayer.play().then(startTimer).catch(() => { videoPlayer.oncanplay = () => { videoPlayer.play(); startTimer(); }; });
+            } else {
+                videoPlayer.style.display = 'none'; iframePlayer.style.display = 'block'; iframePlayer.src = currentAd.video; startTimer();
+            }
+        }
+
+        function finishAd() {
+            document.getElementById('adModal').style.display = 'none';
+            document.getElementById('adPlayer').pause();
+            document.getElementById('adIframe').src = "about:blank";
+            if(adTimerInterval) clearInterval(adTimerInterval);
+            prepareRandomAd();
+            if (currentTargetUrl) window.location.href = currentTargetUrl;
+        }
+
+        function calculate() {
+            let amount = parseFloat(document.getElementById('calcInput').value) || 0;
+            let country = document.getElementById('countrySelect').value;
+            let rate = (country === 'BD') ? currentRates.BD : currentRates.IN;
+            document.getElementById('calcResult').innerText = (amount * rate).toFixed(2) + " " + (country==='BD'?"টাকা":"রুপি");
+        }
+
+        function switchTab(tabId, navElement) {
+            document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            navElement.classList.add('active');
+            
+            // ভিডিও ট্যাব ছাড়া অন্য ট্যাবে গেলে রিসেট করা
+            if(tabId !== 'youtube-page') { 
+                document.getElementById('yt-video-list-view').style.display = 'none'; 
+                document.getElementById('yt-folder-list-view').style.display = 'block'; 
+                // ফুলস্ক্রিন ক্লাস রিমুভ করা যদি থাকে
+                document.body.classList.remove("fullscreen-active");
+                const activeItem = document.querySelector('.video-item.active-playing-video');
+                if(activeItem) activeItem.classList.remove('active-playing-video');
+                // পুরানো iframe মুছে ফেলা (রিলোড সমস্যা এড়াতে)
+                document.querySelectorAll('.video-frame').forEach(frame => {
+                    frame.parentNode.innerHTML = `<img src="https://img.youtube.com/vi/${frame.src.split('/embed/')[1].split('?')[0]}/hqdefault.jpg" class="video-thumb-img"><div class="play-icon-overlay"><i class="fas fa-play"></i></div>`;
+                });
+            }
+            
+            closeTextureDetail();
+            document.getElementById('searchInput').value = "";
+            let cards = document.querySelectorAll('.service-card');
+            cards.forEach(c => c.style.display = "flex");
+        }
+
+        window.onpopstate = () => {
+            if(document.getElementById('adModal').style.display === 'flex') finishAd();
+            else if(document.getElementById('texture-detail-view').style.display === 'block') closeTextureDetail();
+            else if(document.body.classList.contains("fullscreen-active")) {
+                // ভিডিও ফুলস্ক্রিন মোড থেকে বের হওয়া
+                document.body.classList.remove("fullscreen-active");
+                const activeItem = document.querySelector('.video-item.active-playing-video');
+                if(activeItem) {
+                    activeItem.classList.remove('active-playing-video');
+                    // ভিডিও থামিয়ে থাম্বনেইলে ফেরত যাওয়া
+                    const frame = activeItem.querySelector('iframe');
+                    if(frame) {
+                         const vidId = frame.src.split('/embed/')[1].split('?')[0];
+                         activeItem.querySelector('.video-thumbnail-container').innerHTML = `<img src="https://img.youtube.com/vi/${vidId}/hqdefault.jpg" class="video-thumb-img"><div class="play-icon-overlay"><i class="fas fa-play"></i></div>`;
+                    }
+                }
+            }
+            else if(document.getElementById('yt-video-list-view').style.display === 'block') { document.getElementById('yt-video-list-view').style.display = 'none'; document.getElementById('yt-folder-list-view').style.display = 'block'; }
+        };
+    </script>
+</body>
+</html>
