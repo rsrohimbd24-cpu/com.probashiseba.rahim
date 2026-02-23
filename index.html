@@ -107,15 +107,6 @@
         .btn-speak.playing { background: linear-gradient(135deg, #d32f2f, #f44336); }
         .btn-speak:active { transform: scale(0.98); }
 
-        /* --- ইন-অ্যাপ ব্রাউজার (ডেস্কটপ মোড) --- */
-        #web-view-container { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 10000; flex-direction: column; }
-        .web-view-header { background: #006a4e; color: white; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; height: 50px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        .close-web-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 5px 15px; border-radius: 20px; cursor: pointer; font-size: 14px; }
-        .browser-wrapper { flex: 1; position: relative; overflow: hidden; background: #f1f1f1; width: 100%; }
-        #app-browser-frame { position: absolute; top: 0; left: 0; border: none; width: 1280px; height: 100%; transform-origin: 0 0; background: white; }
-        .browser-error-msg { position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); text-align:center; display:none; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 80%; }
-        .force-open-btn { background: #006a4e; color: white; border: none; padding: 10px 20px; border-radius: 20px; margin-top: 15px; font-size: 14px; cursor: pointer; }
-
         /* --- ভিডিও কল পেজ স্টাইল --- */
         #call-container { width: 100%; height: 100vh; position: fixed; top: 0; left: 0; z-index: 20000; background: #fff; display: none; }
         .call-input-group { margin-bottom: 15px; text-align: left; }
@@ -185,23 +176,6 @@
 
     <div id="texture-detail-view" style="display:none; padding: 20px; background: white; min-height: 100vh;">
         <div id="textureDetailContent"></div>
-    </div>
-
-    <!-- ইন-অ্যাপ ব্রাউজার কন্টেইনার (ডেস্কটপ মোড) -->
-    <div id="web-view-container">
-        <div class="web-view-header">
-            <span style="font-weight:bold; font-size:16px;">ব্রাউজার (ডেস্কটপ মোড)</span>
-            <button class="close-web-btn" onclick="closeInAppBrowser()">বন্ধ করুন ✕</button>
-        </div>
-        <div class="browser-wrapper" id="browserWrapper">
-            <iframe id="app-browser-frame" src="" onerror="handleIframeError()"></iframe>
-            <!-- এরর মেসেজ যদি সাইট লোড না হয় -->
-            <div id="browserErrorMsg" class="browser-error-msg">
-                <i class="fas fa-exclamation-triangle" style="font-size:40px; color:#f44336; margin-bottom:10px;"></i>
-                <p>এই সাইটটি ডেস্কটপ মোডে ওপেন করা যাচ্ছে না।</p>
-                <button id="forceOpenBtn" class="force-open-btn">সরাসরি অ্যাপে খুলুন</button>
-            </div>
-        </div>
     </div>
     
     <!-- ZEGOCLOUD কল কন্টেইনার -->
@@ -365,43 +339,6 @@
             currentAudioPlayer.onended = function() { currentChunkIndex++; playNextChunk(btn); };
             currentAudioPlayer.onerror = function() { currentChunkIndex++; playNextChunk(btn); };
             currentAudioPlayer.play().catch(e => { console.log("Audio play error:", e); stopAudio(btn); });
-        }
-
-        // --- ইন-অ্যাপ ব্রাউজার (ডেস্কটপ মোড লজিক) ---
-        function openInAppBrowser(url) {
-            const container = document.getElementById('web-view-container');
-            const iframe = document.getElementById('app-browser-frame');
-            const errorMsg = document.getElementById('browserErrorMsg');
-            
-            errorMsg.style.display = 'none'; 
-            
-            const screenWidth = window.innerWidth;
-            const desktopWidth = 1280; 
-            const scale = screenWidth / desktopWidth;
-
-            iframe.style.transform = `scale(${scale})`;
-            iframe.style.width = `${desktopWidth}px`;
-            iframe.style.height = `${(100 / scale)}%`; 
-            
-            iframe.src = url;
-            container.style.display = 'flex';
-            window.history.pushState({page: 'browser'}, '', '');
-            
-            document.getElementById('forceOpenBtn').onclick = function() {
-                // এখানে ফিক্স করা হয়েছে: forceOpenBtn ক্লিক করলে সেই লিংকটি অ্যাপের ভিতরেই ওপেন হবে
-                window.location.href = url; 
-            };
-        }
-
-        function closeInAppBrowser() {
-            const container = document.getElementById('web-view-container');
-            const iframe = document.getElementById('app-browser-frame');
-            container.style.display = 'none';
-            iframe.src = ""; 
-        }
-        
-        function handleIframeError() {
-            document.getElementById('browserErrorMsg').style.display = 'block';
         }
 
         // ফুলস্ক্রিন ডিটেকশন
@@ -609,13 +546,13 @@
             container.innerHTML = `<iframe class="video-frame" src="${videoUrl}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" allowfullscreen="true"></iframe>`;
         }
 
-        // --- মেইন লিংক হ্যান্ডলার (১০০% অ্যাপের ভিতরে, ডেস্কটপ মোডে) ---
+        // --- মেইন লিংক হ্যান্ডলার (১০০% অ্যাপের মেইন ভিউতে ওপেন হবে) ---
         function handleServiceClick(targetUrl) {
             currentTargetUrl = targetUrl;
             
-            // ১. যদি অ্যাড না থাকে, সরাসরি ডেস্কটপ মোডে ওপেন করুন
+            // ১. যদি অ্যাড না থাকে, সরাসরি ওপেন করুন
             if (!availableAds || availableAds.length === 0) { 
-                openInAppBrowser(targetUrl); 
+                openFullBrowser(targetUrl); 
                 return; 
             }
             
@@ -648,7 +585,7 @@
             }
         }
 
-        // ৩. অ্যাড শেষ হলে ডেস্কটপ মোডে ওপেন হবে
+        // ৩. অ্যাড শেষ হলে ওপেন হবে
         function finishAd() {
             document.getElementById('adModal').style.display = 'none';
             document.getElementById('adPlayer').pause();
@@ -656,7 +593,18 @@
             if(adTimerInterval) clearInterval(adTimerInterval);
             prepareRandomAd();
             
-            openInAppBrowser(currentTargetUrl);
+            openFullBrowser(currentTargetUrl);
+        }
+
+        // --- নতুন ফাংশন: এটি অ্যান্ড্রয়েডকে নির্দেশ দেবে ---
+        function openFullBrowser(url) {
+            // অ্যান্ড্রয়েড ইন্টারফেস চেক করা
+            if (typeof Android !== "undefined" && Android.openUrlInApp) {
+                Android.openUrlInApp(url);
+            } else {
+                // যদি পিসিতে বা ব্রাউজারে টেস্ট করেন
+                window.location.href = url;
+            }
         }
 
         function calculate() {
@@ -696,9 +644,6 @@
             if(document.getElementById('zego-call-container').style.display === 'block') {
                 document.getElementById('zego-call-container').style.display = 'none';
                 window.location.reload(); 
-            }
-            else if(document.getElementById('web-view-container').style.display === 'flex') {
-                closeInAppBrowser();
             }
             else if(document.getElementById('adModal').style.display === 'flex') finishAd();
             else if(document.getElementById('texture-detail-view').style.display === 'block') closeTextureDetail();
